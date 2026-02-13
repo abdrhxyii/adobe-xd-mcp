@@ -2,18 +2,34 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { XDParser } from '../parsers/xd-parser';
+import { XDWebParser } from '../parsers/xd-web-parser';
 import { ReactGenerator, GeneratorOptions } from '../generators/react-generator';
+import { XDDocument } from '../parsers/xd-parser';
 
 export class XDTools {
   private parser: XDParser;
+  private webParser: XDWebParser;
   
   constructor() {
     this.parser = new XDParser();
+    this.webParser = new XDWebParser();
+  }
+
+  private isWebUrl(pathOrUrl: string): boolean {
+    return pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://');
+  }
+
+  private async getDocument(pathOrUrl: string): Promise<XDDocument> {
+    if (this.isWebUrl(pathOrUrl)) {
+      return await this.webParser.parseWebSpec(pathOrUrl);
+    } else {
+      return await this.parser.parseDocument(pathOrUrl);
+    }
   }
   
   async getDocumentInfo(args: { path: string }) {
     try {
-      const doc = await this.parser.parseDocument(args.path);
+      const doc = await this.getDocument(args.path);
       
       return {
         success: true,
@@ -54,7 +70,11 @@ export class XDTools {
     typescript?: boolean;
   }) {
     try {
-      const doc = await this.parser.parseDocument(args.path);
+      const doc = await this.getDocument(args.path);
+      
+      const outputDir = args.outputDir || (this.isWebUrl(args.path) ? './generated' : path.dirname(args.path));
+      
+      await fs.mkdir(outputDir, { recursive: true });
       
       const options: GeneratorOptions = {
         styleSystem: args.styleSystem || 'tailwind',
@@ -62,7 +82,6 @@ export class XDTools {
       };
       
       const generator = new ReactGenerator(options);
-      const outputDir = args.outputDir || path.dirname(args.path);
       
       let generated = 0;
       
@@ -153,7 +172,7 @@ export class XDTools {
     outputFile?: string;
   }) {
     try {
-      const doc = await this.parser.parseDocument(args.path);
+      const doc = await this.getDocument(args.path);
       
       if (doc.colors.length === 0) {
         return {

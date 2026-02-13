@@ -33,7 +33,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             path: {
               type: 'string',
-              description: 'Path to the XD document',
+              description: 'Path to the XD document (local file path or Adobe XD web specs URL)',
             },
           },
           required: ['path'],
@@ -47,7 +47,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             path: {
               type: 'string',
-              description: 'Path to the XD document',
+              description: 'Path to the XD document (local file path or Adobe XD web specs URL)',
             },
             artboardName: {
               type: 'string',
@@ -82,7 +82,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             path: {
               type: 'string',
-              description: 'Path to the XD document',
+              description: 'Path to the XD document (local file path or Adobe XD web specs URL)',
             },
             format: {
               type: 'string',
