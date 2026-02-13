@@ -1,4 +1,5 @@
 import { XDDocument, XDArtboard, XDElement, XDColor, XDComponent } from './xd-parser';
+import { PrototypeData } from '../types/xd-data';
 
 interface XDWebSpec {
   artboards?: Array<{
@@ -20,10 +21,33 @@ interface XDWebSpec {
 }
 
 export class XDWebParser {
-  async parseWebSpec(url: string): Promise<XDDocument> {
-    const normalizedUrl = url.endsWith('/') ? url : `${url}/`;
+  /**
+   * Extract window.prototypeData from HTML
+   */
+  extractPrototypeData(html: string): PrototypeData | null {
+    // Pattern to match: window.prototypeData = {...};
+    const pattern = /window\.prototypeData\s*=\s*({.+?});(?:\s*if\s*\(|$)/s;
+    const match = html.match(pattern);
     
-    const response = await fetch(normalizedUrl, {
+    if (!match) {
+      return null;
+    }
+    
+    try {
+      const jsonStr = match[1];
+      const data = JSON.parse(jsonStr) as PrototypeData;
+      return data;
+    } catch (error) {
+      console.error('Failed to parse prototypeData:', error);
+      return null;
+    }
+  }
+  
+  /**
+   * Fetch HTML from Adobe XD specs URL
+   */
+  async fetchSpecsPage(url: string): Promise<string> {
+    const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -31,12 +55,18 @@ export class XDWebParser {
         'Referer': 'https://xd.adobe.com/'
       }
     });
-
+    
     if (!response.ok) {
       throw new Error(`Failed to fetch XD spec: ${response.status} ${response.statusText}`);
     }
+    
+    return await response.text();
+  }
 
-    const html = await response.text();
+  async parseWebSpec(url: string): Promise<XDDocument> {
+    const normalizedUrl = url.endsWith('/') ? url : `${url}/`;
+    
+    const html = await this.fetchSpecsPage(normalizedUrl);
     const specData = this.extractSpecData(html, normalizedUrl);
     
     let artboards = this.parseArtboards(specData);
